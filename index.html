@@ -327,10 +327,9 @@ footer span{color:var(--gold)}
 @keyframes logoReveal{from{opacity:0;transform:translateY(50px) skewY(4deg)}to{opacity:1;transform:translateY(0) skewY(0)}}
 .intro-logo .ig{color:var(--gold)}
 .intro-sub{font-family:var(--font-mono);font-size:0.62rem;color:rgba(255,255,255,0.3);letter-spacing:0.25em;text-transform:uppercase;opacity:0;animation:fadeUp 0.6s ease 1.6s forwards}
-.intro-loader{width:180px;height:1px;background:rgba(232,201,122,0.12);margin-top:36px;position:relative;opacity:0;animation:fadeUp 0.4s ease 1.9s forwards}
-.intro-loader-fill{position:absolute;left:0;top:0;height:100%;background:linear-gradient(90deg,var(--gold),var(--green));width:0;animation:loadFill 1.2s cubic-bezier(0.16,1,0.3,1) 2.1s forwards}
-@keyframes loadFill{from{width:0}to{width:100%}}
-.intro-loader-pct{position:absolute;top:10px;right:0;font-family:var(--font-mono);font-size:0.55rem;color:rgba(232,201,122,0.5);letter-spacing:0.1em}
+.intro-loader{width:180px;height:2px;background:rgba(232,201,122,0.12);margin-top:36px;position:relative;opacity:0;animation:fadeUp 0.4s ease 1.9s forwards}
+.intro-loader-fill{position:absolute;left:0;top:0;height:100%;background:linear-gradient(90deg,var(--gold),var(--green));width:0;transition:width 1.4s cubic-bezier(0.16,1,0.3,1)}
+.intro-loader-pct{position:absolute;top:8px;right:0;font-family:var(--font-mono);font-size:0.55rem;color:rgba(232,201,122,0.5);letter-spacing:0.1em}
 #site-wrapper{filter:blur(16px);transform:scale(1.04);transition:filter 1.1s ease 0.3s,transform 1.1s ease 0.3s}
 #site-wrapper.revealed{filter:blur(0);transform:scale(1)}
 </style>
@@ -1300,27 +1299,42 @@ renderCountryList();
 // ===== CINEMATIC INTRO =====
 (function() {
   const intro = document.getElementById('intro');
-  const site = document.getElementById('site-wrapper');
-  const fill = document.getElementById('loaderFill');
-  const pct = document.getElementById('loaderPct');
+  const site  = document.getElementById('site-wrapper');
+  const pct   = document.getElementById('loaderPct');
+  const fill  = document.getElementById('loaderFill');
 
-  // animate percentage counter
-  let n = 0;
-  const counter = setInterval(() => {
-    n = Math.min(n + Math.random() * 4 + 1, 100);
-    pct.textContent = Math.floor(n) + '%';
-    if (n >= 100) { pct.textContent = '100%'; clearInterval(counter); }
-  }, 40);
-
-  // open cinematic bars after short delay
-  setTimeout(() => intro.classList.add('bars-open'), 200);
-
-  // exit intro after load sequence completes
-  setTimeout(() => {
+  function exitIntro() {
     intro.classList.add('hide');
     site.classList.add('revealed');
     setTimeout(() => { intro.style.display = 'none'; }, 1200);
-  }, 3600);
+  }
+
+  // Hard fallback — always exits after 5s even if something breaks
+  setTimeout(exitIntro, 5000);
+
+  // Open cinematic bars
+  setTimeout(() => intro.classList.add('bars-open'), 200);
+
+  // At 2100ms: trigger fill bar (CSS transition) + start % counter together
+  setTimeout(() => {
+    // Trigger the fill bar via JS so timing is guaranteed
+    fill.style.width = '100%';
+
+    // Count 0→100 over 1400ms in sync with the fill bar transition
+    const startTime = performance.now();
+    const duration = 1400;
+    function tick(now) {
+      const progress = Math.min((now - startTime) / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      pct.textContent = Math.floor(eased * 100) + '%';
+      if (progress < 1) requestAnimationFrame(tick);
+      else pct.textContent = '100%';
+    }
+    requestAnimationFrame(tick);
+  }, 2100);
+
+  // Exit at 3600ms
+  setTimeout(exitIntro, 3600);
 })();
 </script>
 </body>
